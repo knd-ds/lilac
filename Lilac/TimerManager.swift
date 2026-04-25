@@ -11,8 +11,6 @@ class TimerManager: ObservableObject {
     private let dailyLimit = 600 // 10 minutes in seconds
 
     private init() {
-        loadState()
-        migrateOldLimits()
         checkAndResetIfNeeded()
     }
 
@@ -53,43 +51,22 @@ class TimerManager: ObservableObject {
 
     // MARK: - Private Helpers
 
-    private func loadState() {
-        // Load all saved platform states
-        // For now, just initialize with default values
-        // Will be populated as platforms are accessed
+    private func remainingSecondsKey(for platform: Platform) -> String {
+        "remainingSeconds_\(platform.name)"
     }
 
-    private func migrateOldLimits() {
-        // One-time migration: check if we need to migrate from old limit (3600) to new limit (600)
-        let migrationKey = "didMigrateTo600Limit"
-
-        if !defaults.bool(forKey: migrationKey) {
-            // Reset all platforms to clear old limit values
-            let platforms = [instagram, twitter]
-
-            for platform in platforms {
-                let key = "remainingSeconds_\(platform.name)"
-                if let savedValue = defaults.object(forKey: key) as? Int, savedValue > dailyLimit {
-                    // Old value detected, reset to new limit
-                    defaults.set(dailyLimit, forKey: key)
-                }
-            }
-
-            // Mark migration as complete
-            defaults.set(true, forKey: migrationKey)
-        }
+    private func isLockedKey(for platform: Platform) -> String {
+        "isLocked_\(platform.name)"
     }
 
     private func saveRemainingSeconds(for platform: Platform) {
-        let key = "remainingSeconds_\(platform.name)"
-        defaults.set(remainingSeconds[platform.name] ?? dailyLimit, forKey: key)
+        defaults.set(remainingSeconds[platform.name] ?? dailyLimit, forKey: remainingSecondsKey(for: platform))
     }
 
     private func loadRemainingSeconds(for platform: Platform) -> Int {
-        let key = "remainingSeconds_\(platform.name)"
+        let key = remainingSecondsKey(for: platform)
         if defaults.object(forKey: key) != nil {
             let savedValue = defaults.integer(forKey: key)
-            // Migration: if saved value exceeds current daily limit, reset to daily limit
             if savedValue > dailyLimit {
                 return dailyLimit
             }
@@ -100,24 +77,20 @@ class TimerManager: ObservableObject {
 
     private func lockPlatform(_ platform: Platform) {
         isLocked[platform.name] = true
-        let key = "isLocked_\(platform.name)"
-        defaults.set(true, forKey: key)
+        defaults.set(true, forKey: isLockedKey(for: platform))
     }
 
     private func loadLockState(for platform: Platform) -> Bool {
-        let key = "isLocked_\(platform.name)"
-        return defaults.bool(forKey: key)
+        defaults.bool(forKey: isLockedKey(for: platform))
     }
 
     private func resetAllPlatforms() {
-        let platforms = [instagram, twitter]
-
-        for platform in platforms {
+        for platform in allPlatforms {
             remainingSeconds[platform.name] = dailyLimit
             isLocked[platform.name] = false
 
             saveRemainingSeconds(for: platform)
-            defaults.set(false, forKey: "isLocked_\(platform.name)")
+            defaults.set(false, forKey: isLockedKey(for: platform))
         }
     }
 

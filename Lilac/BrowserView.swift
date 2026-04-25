@@ -14,6 +14,10 @@ struct BrowserView: View {
         timerManager.getRemainingSeconds(for: platform)
     }
 
+    private var isLocked: Bool {
+        timerManager.isLocked(for: platform)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Timer bar - fixed height at top, respects safe area
@@ -35,7 +39,7 @@ struct BrowserView: View {
             timerManager.loadPlatformState(for: platform)
 
             // Check if platform is already locked
-            if timerManager.isLocked(for: platform) {
+            if isLocked {
                 showLockScreen = true
             } else {
                 startTimer()
@@ -47,7 +51,10 @@ struct BrowserView: View {
         .onChange(of: scenePhase) { oldPhase, newPhase in
             switch newPhase {
             case .active:
-                if !timerManager.isLocked(for: platform) {
+                timerManager.checkAndResetIfNeeded()
+                if isLocked {
+                    showLockScreen = true
+                } else {
                     startTimer()
                 }
             case .background, .inactive:
@@ -62,9 +69,8 @@ struct BrowserView: View {
         guard timer == nil else { return }
 
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if remainingSeconds > 0 {
-                timerManager.decrementTime(for: platform)
-            } else {
+            timerManager.decrementTime(for: platform)
+            if isLocked {
                 stopTimer()
                 showLockScreen = true
             }

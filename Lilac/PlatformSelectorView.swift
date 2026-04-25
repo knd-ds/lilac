@@ -6,7 +6,7 @@ struct PlatformSelectorView: View {
 
     @ObservedObject private var timerManager = TimerManager.shared
 
-    private let platforms = [instagram, twitter]
+    private let platforms = allPlatforms
 
     var body: some View {
         ZStack {

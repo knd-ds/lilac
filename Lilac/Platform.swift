@@ -24,5 +24,7 @@ let twitter = Platform(
     allowedDomains: ["twitter.com", "x.com", "t.co"]
 )
 
-// Post-MVP platforms (not yet implemented):
+let allPlatforms: [Platform] = [instagram, twitter]
+
+// Post-MVP platforms:
 // - Reddit
