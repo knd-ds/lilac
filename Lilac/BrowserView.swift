@@ -24,7 +24,7 @@ struct BrowserView: View {
                 .background(Color.black)
 
             // WKWebView - fills remaining space
-            WebViewContainer(url: platform.url)
+            WebViewContainer(platform: platform)
                 .ignoresSafeArea(.container, edges: .bottom)
         }
         .navigationBarBackButtonHidden(false)
@@ -78,7 +78,7 @@ struct BrowserView: View {
 }
 
 struct WebViewContainer: UIViewRepresentable {
-    let url: String
+    let platform: Platform
 
     func makeUIView(context: Context) -> WKWebView {
         // Configure WKWebView to behave like Safari and avoid detection
@@ -131,7 +131,7 @@ struct WebViewContainer: UIViewRepresentable {
         webView.uiDelegate = context.coordinator
         webView.navigationDelegate = context.coordinator
 
-        if let requestURL = URL(string: url) {
+        if let requestURL = URL(string: platform.url) {
             webView.load(URLRequest(url: requestURL))
         }
 
@@ -141,19 +141,14 @@ struct WebViewContainer: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(platformURL: url)
+        Coordinator(allowedDomains: platform.allowedDomains)
     }
 
     class Coordinator: NSObject, WKUIDelegate, WKNavigationDelegate {
-        let platformDomain: String
+        let allowedDomains: [String]
 
-        init(platformURL: String) {
-            // Extract domain from platform URL
-            if let url = URL(string: platformURL), let host = url.host {
-                self.platformDomain = host
-            } else {
-                self.platformDomain = ""
-            }
+        init(allowedDomains: [String]) {
+            self.allowedDomains = allowedDomains
             super.init()
         }
 
@@ -165,7 +160,7 @@ struct WebViewContainer: UIViewRepresentable {
                 return nil
             }
 
-            // Check if URL is external
+            // window.open() is always a user-initiated action, open external links in browser
             if isExternalURL(url) {
                 openInExternalBrowser(url)
             }
@@ -185,8 +180,15 @@ struct WebViewContainer: UIViewRepresentable {
 
             // Check if URL is external
             if isExternalURL(url) {
-                openInExternalBrowser(url)
-                decisionHandler(.cancel)
+                // Only open in external browser if it's a user tap, not an automatic redirect
+                if navigationAction.navigationType == .linkActivated {
+                    openInExternalBrowser(url)
+                    decisionHandler(.cancel)
+                } else {
+                    // Automatic redirect (like twitter.com → x.com or instagram → facebook auth)
+                    // Allow it to load in WKWebView
+                    decisionHandler(.allow)
+                }
             } else {
                 // Internal navigation - allow normally
                 decisionHandler(.allow)
@@ -201,8 +203,14 @@ struct WebViewContainer: UIViewRepresentable {
                 return false
             }
 
-            // Check if host matches platform domain
-            return !host.contains(platformDomain)
+            // Check if host matches any of the allowed domains
+            for domain in allowedDomains {
+                if host.contains(domain) {
+                    return false // Internal - host contains one of our allowed domains
+                }
+            }
+
+            return true // External - host doesn't match any allowed domain
         }
 
         private func openInExternalBrowser(_ url: URL) {

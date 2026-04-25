@@ -5,6 +5,7 @@ struct Platform: Identifiable {
     let name: String
     let url: String
     let color: Color
+    let allowedDomains: [String]
 }
 
 // MARK: - Platform Definitions
@@ -12,13 +13,15 @@ struct Platform: Identifiable {
 let instagram = Platform(
     name: "Instagram",
     url: "https://www.instagram.com",
-    color: .purple
+    color: .purple,
+    allowedDomains: ["instagram.com", "facebook.com", "fbcdn.net"]
 )
 
 let twitter = Platform(
     name: "Twitter",
     url: "https://twitter.com",
-    color: .purple
+    color: .purple,
+    allowedDomains: ["twitter.com", "x.com", "t.co"]
 )
 
 // Post-MVP platforms (not yet implemented):
