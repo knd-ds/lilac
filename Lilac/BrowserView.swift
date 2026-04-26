@@ -161,13 +161,10 @@ struct WebViewContainer: UIViewRepresentable {
         // MARK: - WKUIDelegate (handles window.open() for Instagram Stories links)
 
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-            // Extract URL from navigation action
-            guard let url = navigationAction.request.url else {
-                return nil
-            }
-
-            // window.open() is always a user-initiated action, open external links in browser
-            if isExternalURL(url) {
+            // window.open() is always user-initiated — open every URL externally regardless of domain.
+            // isExternalURL is not consulted here: redirect domains like l.instagram.com appear
+            // "internal" by domain match but always point to external content.
+            if let url = navigationAction.request.url {
                 openInExternalBrowser(url)
             }
 
